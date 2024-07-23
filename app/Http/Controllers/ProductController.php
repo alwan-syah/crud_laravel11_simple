@@ -76,4 +76,16 @@ class ProductController extends Controller
         // jika berhasil akan redirect ke route product.index
         return redirect()->route('products.index')->with(['success' => 'Data Berhasil Disimpan!']);
     }
+
+    public function show(string $id): View{
+        // get product by ID
+        // membuat variable product, memanggil model product, memanggil method findorfail
+        // findorfail jika menemukan akan tampil, jika tidak ditemukan maka akan menampilkan 404
+        // parameter id
+        $product = Product::findOrFail($id);
+
+        // render view with product 
+        // jika data berhasil didapatkan maka kirim ke folder products dgn nama file show
+        return view ('products.show', compact('product'));
+    }
 }
