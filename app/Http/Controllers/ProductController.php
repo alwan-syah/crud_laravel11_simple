@@ -15,6 +15,11 @@ use Illuminate\Http\RedirectResponse;
 // digunakan untuk menerima request
 use Illuminate\Http\Request;
 
+// import Facades Storage
+// digunakan untuk menghapus file gambar didalam project laravel
+// ketika mengubah gambar nya
+use Illuminate\Support\Facades\Storage;
+
 class ProductController extends Controller
 {
     public function index(): View
@@ -60,7 +65,7 @@ class ProductController extends Controller
         $image = $request->file('image');
         // gambar akan disimpan di folder storage -> public ->products,
         // -hashname artinya nama gambar akan di random
-        $image->storeAs('public/products', $image->hashName());
+        // $image->storeAs('public/products', $image->hashName());
 
         //create product
         // proses memasukan data
@@ -77,7 +82,8 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with(['success' => 'Data Berhasil Disimpan!']);
     }
 
-    public function show(string $id): View{
+    public function show(string $id): View
+    {
         // get product by ID
         // membuat variable product, memanggil model product, memanggil method findorfail
         // findorfail jika menemukan akan tampil, jika tidak ditemukan maka akan menampilkan 404
@@ -86,6 +92,86 @@ class ProductController extends Controller
 
         // render view with product 
         // jika data berhasil didapatkan maka kirim ke folder products dgn nama file show
-        return view ('products.show', compact('product'));
+        return view('products.show', compact('product'));
+    }
+
+    public function edit(string $id): View
+    {
+
+        // get product by ID
+        $product = Product::findOrFail($id);
+
+        // render view with product
+        return view('products.edit', compact('product'));
+    }
+
+    public function update(Request $request, $id): RedirectResponse
+    {
+        // validate form
+        // validasi saat edit data
+        // image tidak wajib diubah
+        $request->validate([
+            'image' => 'image|mimes:jpeg,jpg,png|max:2048',
+            'title' => 'required|min:5',
+            'description' => 'required|min:10',
+            'price' => 'required|numeric',
+            'stock' => 'required|numeric',
+        ]);
+
+        // get product by ID
+        // mencari data product berdasarkan id
+        $product = Product::findOrFail($id);
+
+        // check if image is uploaded
+        // jika ada request berupa image artinya jika ada gambar yg diubah 
+        // atau gambar baru
+        if ($request->hasFile('image')) {
+
+            // upload new image
+            // maka upload gambar baru
+            $image = $request->file('image');
+            // gambar tersebut akan disimpan dalam folder product
+            $image->storeAs('public/products/', $image->hashName());
+
+            // delete old image
+            // menghapus gambar yg lama
+            Storage::delete('public/products/' . $product->image);
+
+            // update product with new image
+            $product->update([
+                'image' => $image->hashName(),
+                'title' => $request->title,
+                'description' => $request->description,
+                'price' => $request->price,
+                'stock' => $request->stock
+            ]);
+        } else {
+
+            // update product without image
+            $product->update([
+                'title' => $request->title,
+                'description' => $request->description,
+                'price' => $request->price,
+                'stock' => $request->stock
+            ]);
+        }
+
+        // redirect to index
+        return redirect()->route('products.index')->with(['succes' => 'Data Berhasil diubah']);
+    }
+
+    public function destroy($id): RedirectResponse
+    {
+        // get product by ID
+        $product = Product::findOrFail($id);
+
+        // delete image
+        Storage::delete('public/products/' . $product->image);
+
+        // delete product
+        $product->delete();
+
+        // redirect to index
+        return redirect()->route('products.index')->with(['success' => 'Data Berhasil Dihapus!']);
     }
 }
